@@ -10,6 +10,8 @@ export default {
       colors: {
         navy:'#08244C',
         white:'#f2f2f2',
+        orange:'#FFDE73',
+        green: '#82D9A0',
       },
       fontSize: {
         xs: "0.6rem",

@@ -13,6 +13,7 @@ function Dashboard() {
 	const [isOpen, setIsOpen] = useState(false);
 	const [selectedArrhythmia, setSelectedArrhythmia] = useState<string[]>([]);
     const [selectedOption, setSelectedOption] = useState<string>('Tables');
+	const [selectedPatient, setSelectedPatient] = useState<string | null>(null);
 
 	const arrhythmia = ['PVC', 'Pause', 'AV Block'];
 	const patients = [{ id: 1, name: 'Bob' }, { id: 2, name: 'Bob' }];
@@ -39,6 +40,11 @@ function Dashboard() {
         }
     };
 
+	const handlePatientClick = (patient: string) => {
+		setSelectedPatient(patient);
+		setIsOpen(!isOpen);
+	};
+
 	const handleOptionClick = (option: string) => {
         setSelectedOption(option);
     };
@@ -64,10 +70,14 @@ function Dashboard() {
 							{isTyping && searchTerm ? (
 								<>
 									<FaArrowTurnUp className="absolute top-2.5 text-white w-3 h-3 transform rotate-90" />
-									<div className="absolute top-7 left-0 w-full bg-navy bg-opacity-80 rounded">
+									<div className="absolute top-7 left-0 w-full bg-navy bg-opacity-60 rounded">
 									{filteredPatients.length > 0 ? (
 										filteredPatients.map((patient) => (
-											<div key={patient.id} className="p-2 text-white text-xs hover:bg-navy hover:rounded cursor-pointer">
+											<div 
+												key={patient.id}
+												onClick={() => handlePatientClick(patient.name)}
+												className="p-2 text-white text-xs hover:bg-navy hover:rounded cursor-pointer"
+											>
 												{patient.name}
 											</div>
 										))
@@ -127,6 +137,98 @@ function Dashboard() {
 						</div>
 					</div>
 				</div>
+
+				{/**/}
+				{selectedPatient ? (
+					<div className="px-4 py-10 border border-navy h-[20vh] relative">
+						<span className="absolute text-lilac top-2 right-4 cursor-pointer" onClick={() => {setSelectedPatient(null);}} >
+							&#10005;
+						</span>
+						<table className="w-full text-xs border-navy">
+							<thead>
+								<tr className="text-white text-end bg-navy bg-opacity-60">
+									<th>#</th>
+									<th>Name</th>
+									<th>Time & Date</th>
+									<th>Arrhythmia</th>
+									<th>Status</th>
+									<th></th>
+								</tr>
+							</thead>
+							<tbody>
+							<tr className="text-end">
+								<td className="p-2">1</td>
+								<td className="p-2">Bob</td>
+								<td className="p-2">22/04/2222</td>
+								<td className="p-2">PVC</td>
+								<td className="p-2"><span className="bg-orange px-2 py-1 rounded">Pending</span></td>
+								<td className="p-2"><button className="bg-green px-2 py-1 rounded hover:opacity-40 cursor-pointer">Done</button></td>
+							</tr>
+						</tbody>
+					</table>
+					</div>
+				) : selectedOption === 'Tables' ? (
+				<div className="flex flex-row space-x-2 w-full">
+					<div className="flex-1 border border-navy h-[60vh] rounded-lg">
+						<div className="h-8 bg-navy rounded-t text-white text-sm py-2 px-4">
+							<span>X</span>
+							<span className="ml-2">Pending + Rejected</span>
+						</div>
+						{/*TEST CARD*/}
+						<div className="p-2">
+							<div className="flex flex-col justify-between bg-orange h-20 rounded-lg text-xs p-4">
+								<div className="flex flex-row justify-between">
+									<p>Name</p>
+									<p>Pending</p>
+								</div>
+								<div className="flex flex-row justify-between">
+									<p>PVC</p>
+									<p>Date</p>
+								</div>
+							</div>
+						</div>
+					</div>
+					<div className="flex-1 border border-navy h-[60vh] rounded-lg">
+						<div className="h-8 bg-navy rounded-t text-white text-sm py-2 px-4">
+							<span>X</span>
+							<span className="ml-2">Done</span>
+						</div>
+					</div>
+				</div>
+			) : selectedOption === 'List' ? (
+				<div className="flex flex-col space-y-2 w-full">
+					<div className="border border-navy h-[32vh] rounded-lg">
+						<div className="h-8 bg-navy rounded-t text-white text-sm py-2 px-4">
+							<span>X</span>
+							<span className="ml-2">Pending + Rejected</span>
+						</div>
+						{/*TEST CARD*/}
+						<div className="p-2">
+							<div className="px-4 pb-2 flex flex-row justify-between text-xs text-navy">
+								<p>#</p>
+								<p>Name</p>
+								<p>Time & Date</p>
+								<p>Arrhythmia</p>
+								<p>Status</p>
+							</div>
+							<div className="flex flex-row justify-between bg-orange rounded text-xs px-4 py-1">
+								<p>1</p>
+								<p>Bob</p>
+								<p>22/04/2222</p>
+								<p>PVC</p>
+								<p>Pending</p>
+							</div>
+						</div>
+
+					</div>
+					<div className="border border-navy h-[32vh] rounded-lg">
+						<div className="h-8 bg-navy rounded-t text-white text-sm py-2 px-4">
+							<span>X</span>
+							<span className="ml-2">Done</span>
+						</div>
+					</div>
+				</div>
+			) : null }
 
 			</div>
 		</MainLayout>
