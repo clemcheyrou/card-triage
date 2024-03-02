@@ -1,11 +1,10 @@
 {
-  "name": "app",
+  "name": "server",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
-  "devDependencies": {},
   "scripts": {
-    "start": "echo 'App start script'"
+    "start": "json-server -p 3000 --watch cards.json"
   },
   "repository": {
     "type": "git",
