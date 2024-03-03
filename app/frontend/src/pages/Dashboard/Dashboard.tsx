@@ -1,15 +1,18 @@
 import { IoMdSearch } from "react-icons/io";
 import MainLayout from "../../components/Nav/MainLayout";
 import { useState, useEffect } from "react";
-import { fetchCards } from "../../services/api";
-
-{/*Icons*/}
+import { fetchCards, patchCard } from "../../services/api";
 import { FaArrowTurnUp, FaList } from "react-icons/fa6";
 import { MdOutlineKeyboardArrowDown } from "react-icons/md";
 import { PiColumnsFill } from "react-icons/pi";
 import { Patient } from "../../services/interface";
+import PatientDetails from "../../components/DisplayOptions/PatientDetails";
+import PatientTables from "../../components/DisplayOptions/PatientTables";
+import PatientList from "../../components/DisplayOptions/PatientList";
 
 function Dashboard() {
+	const [statusHandled, setStatusHandled] = useState(false);
+
 	const [isTyping, setIsTyping] = useState(false);
 	const [searchTerm, setSearchTerm] = useState('');
 	const [isOpen, setIsOpen] = useState(false);
@@ -26,14 +29,15 @@ function Dashboard() {
 
 	useEffect(() => {
 		fetchCards()
-		  .then(data => {
-			setPatients(data);
-			console.log('cards', patients)
-		  })
-		  .catch((error: any) => {
-			console.log(error)
-		  });
-	}, []);
+			.then(data => {
+				setPatients(data);
+				console.log('cards', patients);
+				setStatusHandled(false);
+			})
+			.catch((error: any) => {
+				console.log(error);
+			});
+	}, [statusHandled]);
 
 	const handleInputChange = (e: any) => {
 		const inputValue = e.target.value;
@@ -66,16 +70,58 @@ function Dashboard() {
         setSelectedOption(option);
     };
 
+	const handleStatus = (patientId : number, status: string) => {
+		patchCard(patientId, status)
+			.then(data => {
+				console.log('change', data)
+				const updatedPatients = patients.map(patient =>
+					patient.id === patientId ? data : patient
+				);
+				setPatients(updatedPatients);
+				if (selectedPatient)
+					setSelectedPatient(data);
+			})
+			.catch((error: any) => {
+				console.log(error)
+			});
+	};
+
+	const handleDragStart = (e: React.DragEvent<HTMLDivElement>, id: number) => {
+		e.dataTransfer.setData('text/plain', id.toString());
+	};
+
+	const handleDropRejected = (e: React.DragEvent<HTMLDivElement>) => {
+		e.preventDefault();
+		const id = e.dataTransfer.getData('text/plain');
+		handleStatus(parseInt(id), 'REJECTED');
+		setStatusHandled(true);
+	};
+
+	const handleDropDone = (e: React.DragEvent<HTMLDivElement>) => {
+		e.preventDefault();
+		const id = e.dataTransfer.getData('text/plain');
+		handleStatus(parseInt(id), 'DONE');
+		setStatusHandled(true);
+	};
+
+	const handleDragOver = (e) => {
+		e.preventDefault();
+	};
+
 	return (
 		<MainLayout>
 			<div className="p-6 flex-col space-y-6">
 
 				<div className="flex flex-col space-y-2 text-navy">
 					<h1 className="font-medium">Good Morning!</h1>
-					<h2 className="text-sm">I hope you’re in good mood because there are x patients waiting for you.</h2>
+					<h2 className="text-sm">{pendingPatients.length !== 0
+						? `I hope you're in a good mood because there are ${pendingPatients.length} patients waiting for you.`
+						: "The day is going to be beautiful because no patient is waiting for you."
+  					}</h2>
 				</div>
 
 				<div className="px-4 flex flex-row bg-navy rounded-lg">
+					
 					{/*Find Patient*/}
 					<div className="relative border-r border-white">
 							<input
@@ -107,6 +153,7 @@ function Dashboard() {
 								<IoMdSearch className="absolute top-2 w-3.5 h-3.5 text-white"/>
 							)}
 					</div>
+
 					{/*Find Arrhythmia*/}
 					<div className="relative border-r border-white">
 							<input
@@ -155,194 +202,28 @@ function Dashboard() {
 					</div>
 				</div>
 
+				{/*Display*/}
 				{selectedPatient ? (
-					<div className="px-4 py-10 border border-navy h-[20vh] relative">
-						<span className="absolute text-lilac top-2 right-4 cursor-pointer" onClick={() => {setSelectedPatient(null);}} >
-							&#10005;
-						</span>
-						<table className="w-full text-xs border-navy">
-							<thead>
-								<tr className="text-white text-end bg-navy bg-opacity-60">
-									<th>#</th>
-									<th>Name</th>
-									<th>Time & Date</th>
-									<th>Arrhythmia</th>
-									<th>Status</th>
-									<th></th>
-								</tr>
-							</thead>
-							<tbody>
-							<tr className="text-end">
-								<td className="p-2">{selectedPatient.id}</td>
-								<td className="p-2">{selectedPatient.patient_name}</td>
-								<td className="p-2">{new Date(selectedPatient.created_date).toLocaleDateString()} {new Date(selectedPatient.created_date).toLocaleTimeString()}</td>
-								<td className="p-2">{selectedPatient.arrhythmias.join(', ')}</td>
-								<td className="p-2"><span className={`${selectedPatient.status === 'DONE' ? 'bg-green' : (selectedPatient.status === 'REJECTED') ? 'bg-red' : 'bg-orange'} px-2 py-1 rounded`}>{selectedPatient.status.toLowerCase()}</span></td>
-								{selectedPatient.status === 'DONE' ? (
-									<td className="p-2"><button className="text-red rounded underline hover:opacity-40 cursor-pointer">Rejected</button></td>
-								) : ( 
-									<td className="p-2"><button className="bg-green px-2 py-1 rounded hover:opacity-40 cursor-pointer">Done</button></td>
-								)}
-							</tr>
-						</tbody>
-					</table>
-					</div>
+				    <PatientDetails selectedPatient={selectedPatient} handleStatus={handleStatus} setSelectedPatient={setSelectedPatient}/>
 				) : selectedOption === 'Tables' ? (
-				<div className="flex flex-row space-x-2 w-full">
-					<div className="flex-1 border border-navy h-[62vh] rounded-lg overflow-hidden">
-						<div className="h-8 bg-navy rounded-t text-white text-sm py-2 px-4">
-							<span>{pendingPatients.length + rejectedPatients.length}</span>
-							<span className="ml-2">Pending + Rejected</span>
-						</div>
-						<div className="p-2 h-[56vh] overflow-y-auto">
-							{pendingPatients && pendingPatients.map((pending, index) => (
-							(selectedArrhythmia.length === 0 || pending.arrhythmias.some(arrhythmia => selectedArrhythmia.includes(arrhythmia))) ? (
-							<div key={index} className="flex flex-col justify-between bg-orange h-20 rounded-lg text-xs p-4 mb-2">
-								<div className="flex flex-row justify-between">
-									<p>{pending.patient_name}</p>
-									<p>Pending</p>
-								</div>
-								<div className="flex flex-row justify-between text-end items-center">
-									<div className="flex flex-wrap-reverse">
-										{pending.arrhythmias.map((arrhythmia, index) => (
-											<p key={index} className="border p-0.5 rounded bg-white mr-0.5">{arrhythmia}</p>
-										))}
-									</div>
-									<p className="text-xss">{new Date(pending.created_date).toLocaleDateString()} <br/>{new Date(pending.created_date).toLocaleTimeString()}</p>
-								</div>
-							</div>
-							) : null
-							))}
-							{rejectedPatients && rejectedPatients.map((rejected, index) => (
-							(selectedArrhythmia.length === 0 || rejected.arrhythmias.some(arrhythmia => selectedArrhythmia.includes(arrhythmia))) ? (
-							<div key={index} className="flex flex-col justify-between bg-red h-20 rounded-lg text-xs p-4 mb-2">
-								<div className="flex flex-row justify-between">
-									<p>{rejected.patient_name}</p>
-									<p>Rejected</p>
-								</div>
-								<div className="flex flex-row justify-between text-end items-center">
-									<div className="flex flex-wrap-reverse">
-										{rejected.arrhythmias.map((arrhythmia, index) => (
-											<p key={index} className="border p-0.5 rounded bg-white mr-0.5">{arrhythmia}</p>
-										))}
-									</div>
-									<p className="text-xss">{new Date(rejected.created_date).toLocaleDateString()} <br/>{new Date(rejected.created_date).toLocaleTimeString()}</p>
-								</div>
-							</div>
-							) : null
-							))}
-						</div>
-					</div>
-					<div className="flex-1 border border-navy h-[62vh] rounded-lg">
-						<div className="h-8 bg-navy rounded-t text-white text-sm py-2 px-4">
-							<span>{donePatients.length}</span>
-							<span className="ml-2">Done</span>
-						</div>
-						<div className="p-2 h-[56vh] overflow-y-auto">
-							{donePatients && donePatients.map((done, index) => (
-							(selectedArrhythmia.length === 0 || done.arrhythmias.some(arrhythmia => selectedArrhythmia.includes(arrhythmia))) ? (
-							<div key={index} className="flex flex-col justify-between bg-green h-20 rounded-lg text-xs p-4 mb-2">
-								<div className="flex flex-row justify-between">
-									<p>{done.patient_name}</p>
-									<p>Done</p>
-								</div>
-								<div className="flex flex-row justify-between items-center">
-									<div className="flex flex-wrap">
-										{done.arrhythmias.map((arrhythmia, index) => (
-											<p key={index} className="border p-0.5 rounded bg-white mr-0.5">{arrhythmia}</p>
-										))}
-									</div>
-									<p className="text-xss text-end">{new Date(done.created_date).toLocaleDateString()} <br/>{new Date(done.created_date).toLocaleTimeString()}</p>
-								</div>
-							</div>
-							) : null
-							))}
-						</div>
-					</div>
-				</div>
-			) : selectedOption === 'List' ? (
-				<div className="flex flex-col space-y-2 w-full">
-					<div className="border border-navy h-[32vh] rounded-lg overflow-hide">
-						<div className="h-8 bg-navy rounded-t text-white text-sm py-2 px-4">
-							<span>{pendingPatients.length + rejectedPatients.length}</span>
-							<span className="ml-2">Pending + Rejected</span>
-						</div>
-						<div className="h-[30vh] overflow-y-auto">
-							<table className="w-full text-xs border-navy">
-								<thead>
-									<tr className="text-white bg-navy bg-opacity-60 text-center">
-										<th>#</th>
-										<th>Name</th>
-										<th>Time & Date</th>
-										<th>Arrhythmia</th>
-										<th>Status</th>
-									</tr>
-								</thead>
-								{pendingPatients && pendingPatients.map((pending, index) => (
-								(selectedArrhythmia.length === 0 || pending.arrhythmias.some(arrhythmia => selectedArrhythmia.includes(arrhythmia))) ? (
-									<tbody>
-									<tr key={index} className="text-center bg-orange border border-white">
-										<td className="w-6 p-1">{pending.id}</td>
-										<td className="w-6 p-1">{pending.patient_name}</td>
-										<td className="w-6 p-1">{new Date(pending.created_date).toLocaleDateString()} {new Date(pending.created_date).toLocaleTimeString()}</td>
-										<td className="w-6 p-1">{pending.arrhythmias.join(', ')}</td>
-										<td className="w-6 p-1">Pending</td>
-									</tr>
-									</tbody>
-								) : null
-								))}
-								{rejectedPatients && rejectedPatients.map((rejected, index) => (
-								(selectedArrhythmia.length === 0 || rejected.arrhythmias.some(arrhythmia => selectedArrhythmia.includes(arrhythmia))) ? (
-									<tbody>
-									<tr key={index} className="text-center bg-red border border-white">
-										<td className="w-6 p-1">{rejected.id}</td>
-										<td className="w-6 p-1">{rejected.patient_name}</td>
-										<td className="w-6 p-1">{new Date(rejected.created_date).toLocaleDateString()} {new Date(rejected.created_date).toLocaleTimeString()}</td>
-										<td className="w-6 p-1">{rejected.arrhythmias.join(', ')}</td>
-										<td className="w-6 p-1">Rejected</td>
-									</tr>
-									</tbody>
-								) : null
-								))}
-							</table>
-						</div>
-					</div>
-
-					<div className="border border-navy h-[32vh] rounded-l overflow-hide">
-						<div className="h-8 bg-navy rounded-t text-white text-sm py-2 px-4">
-							<span>{donePatients.length}</span>
-							<span className="ml-2">Done</span>
-						</div>
-						<div className="h-[30vh] overflow-y-auto">
-							<table className="w-full text-xs border-navy">
-								<thead>
-									<tr className="text-white bg-navy bg-opacity-60 text-center">
-										<th>#</th>
-										<th>Name</th>
-										<th>Time & Date</th>
-										<th>Arrhythmia</th>
-										<th>Status</th>
-									</tr>
-								</thead>
-								{donePatients && donePatients.map((done, index) => (
-								(selectedArrhythmia.length === 0 || done.arrhythmias.some(arrhythmia => selectedArrhythmia.includes(arrhythmia))) ? (
-									<tbody>
-									<tr key={index} className="text-center bg-green border border-white">
-										<td className="w-6 p-1">{done.id}</td>
-										<td className="w-6 p-1">{done.patient_name}</td>
-										<td className="w-6 p-1">{new Date(done.created_date).toLocaleDateString()} {new Date(done.created_date).toLocaleTimeString()}</td>
-										<td className="w-6 p-1">{done.arrhythmias.join(', ')}</td>
-										<td className="w-6 p-1">Done</td>
-									</tr>
-									</tbody>
-								) : null
-								))}
-							</table>
-						</div>
-					</div>
-				</div>
-			) : null }
-
+					<PatientTables
+						patients={patients}
+						selectedArrhythmia={selectedArrhythmia}
+						handleDropRejected={handleDropRejected}
+						handleDropDone={handleDropDone}
+						handleDragOver={handleDragOver}
+						handleDragStart={handleDragStart}
+					/>
+				) : selectedOption === 'List' ? (
+					<PatientList
+						patients={patients}
+						selectedArrhythmia={selectedArrhythmia}
+						handleDropRejected={handleDropRejected}
+						handleDropDone={handleDropDone}
+						handleDragOver={handleDragOver}
+						handleDragStart={handleDragStart}
+					/>
+				) : null}
 			</div>
 		</MainLayout>
   )
